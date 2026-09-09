@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 뽑기 등장/실패 애니메이션 */
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  70% {
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.animate-pop {
+  animation: pop-in 0.35s ease-out;
+}
+
+@keyframes shake-in {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}
+.animate-shake {
+  animation: shake-in 0.3s ease-in-out;
+}
+
+/* 뽑기 버튼 누를 때 기계가 살짝 흔들리는 연출 */
+@keyframes machine-wobble {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-4px) rotate(-1.5deg);
+  }
+  50% {
+    transform: translateY(2px) rotate(1.5deg);
+  }
+  75% {
+    transform: translateY(-2px) rotate(-1deg);
+  }
+}
+.animate-wobble {
+  animation: machine-wobble 0.5s ease-in-out;
+}
+
+/* 카드가 뒤집히듯 등장하는 연출 */
+@keyframes card-flip {
+  0% {
+    opacity: 0;
+    transform: perspective(600px) rotateY(90deg) scale(0.8);
+  }
+  60% {
+    opacity: 1;
+    transform: perspective(600px) rotateY(-10deg) scale(1.05);
+  }
+  100% {
+    transform: perspective(600px) rotateY(0deg) scale(1);
+  }
+}
+.animate-card-flip {
+  animation: card-flip 0.6s ease-out;
+}
+
+/* 성공 시 터지는 스파클 파티클 */
+@keyframes sparkle-fly {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--sx), var(--sy)) scale(1.1);
+  }
+}
+.animate-sparkle {
+  animation: sparkle-fly 0.9s ease-out forwards;
+}
+
+/* 코인/카드가 위로 떠오르는 연출 */
+@keyframes float-up {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-float-up {
+  animation: float-up 0.45s ease-out;
+}
+
+/* 스팸 방지 필드: 화면에서 숨기되 일반 클래스로 은폐 */
+.gift-honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
