@@ -11,7 +11,7 @@ import {
   TYPE_ICON,
   isTyping,
 } from "@/mocks/questions";
-import type { UserAnswer } from "@/mocks/questions";
+import type { Question, UserAnswer } from "@/mocks/questions";
 import { isAnswerCorrect } from "@/mocks/questions";
 import { useProgress, type WrongNote } from "@/hooks/useProgress";
 import { useGame, coinsForScore } from "@/hooks/useGame";
@@ -19,13 +19,17 @@ import { useGame, coinsForScore } from "@/hooks/useGame";
 export default function QuizPage() {
   const navigate = useNavigate();
   const { finishDay, today } = useProgress();
-  const { earnCoins } = useGame();
+  const { earnCoins, useItem, state: gameState } = useGame();
   const questions = useMemo(() => loadQuestions(), []);
 
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<UserAnswer[]>(
     () => questions.map(() => null),
   );
+  // 문제별 힌트 사용 여부
+  const [hintShown, setHintShown] = useState<Set<number>>(new Set());
+  // 문제별 5050로 제거된 보기 인덱스
+  const [eliminated, setEliminated] = useState<Record<number, number[]>>({});
 
   const q = questions[current];
   const typing = isTyping(q);
@@ -34,6 +38,10 @@ export default function QuizPage() {
   const isLast = current === questions.length - 1;
   const progress =
     ((current + (answered ? 1 : 0)) / questions.length) * 100;
+
+  const hintCount = gameState.inventory.hint ?? 0;
+  const fiftyCount = gameState.inventory.fiftyFifty ?? 0;
+  const skipCount = gameState.inventory.skipTicket ?? 0;
 
   const choose = (i: number) => {
     const next = [...answers];
@@ -47,36 +55,77 @@ export default function QuizPage() {
     setAnswers(next);
   };
 
+  const useHint = () => {
+    if (hintCount <= 0 || hintShown.has(current)) return;
+    useItem("hint");
+    setHintShown((prev) => new Set(prev).add(current));
+  };
+
+  const useFiftyFifty = () => {
+    if (fiftyCount <= 0 || eliminated[current] || !q.choices) return;
+    // 정답은 남기고, 오답 중 2개를 무작위로 제거
+    const wrongs = q.choices
+      .map((_, i) => i)
+      .filter((i) => i !== q.answerIndex);
+    const shuffled = [...wrongs].sort(() => Math.random() - 0.5);
+    const toRemove = shuffled.slice(0, 2);
+    useItem("fiftyFifty");
+    setEliminated((prev) => ({ ...prev, [current]: toRemove }));
+  };
+
+  const skipQuestion = () => {
+    if (skipCount <= 0) return;
+    useItem("skipTicket");
+    // 이 문제를 정답으로 처리하지 않고 다음으로 넘어감
+    const next = [...answers];
+    next[current] = "__skipped__" as unknown as UserAnswer;
+    setAnswers(next);
+    if (isLast) {
+      submitWith(next);
+    } else {
+      setCurrent((c) => c + 1);
+    }
+  };
+
   const submit = () => {
     if (!answered) return;
     if (questions.length === 0) return;
     const nextAnswers = [...answers];
+    submitWith(nextAnswers);
+  };
 
+  const submitWith = (nextAnswers: UserAnswer[]) => {
     let correct = 0;
     const wrongs: WrongNote[] = [];
     questions.forEach((question, i) => {
       const a = nextAnswers[i];
+      // 스킵한 문제는 정답/오답 모두 카운트 제외
+      if (a === ("__skipped__" as unknown as UserAnswer)) return;
       if (isAnswerCorrect(question, a)) correct++;
       else if (a !== null && a !== "") {
         wrongs.push({ question, userAnswer: a, date: today });
       }
     });
 
-    const perfect = correct === questions.length;
+    // 스킵한 문제가 있으면 total에서 제외
+    const skippedCount = nextAnswers.filter(
+      (a) => a === ("__skipped__" as unknown as UserAnswer),
+    ).length;
+    const effectiveTotal = questions.length - skippedCount;
 
     if (isLast) {
-      // 출제 기록 갱신 (만점이면 해당 문제들 사이클 격리)
+      const perfect = effectiveTotal > 0 && correct === effectiveTotal;
       recordRound(questions, perfect);
-      recordSkill(correct, questions.length);
-      finishDay(correct, questions.length, wrongs);
-      const earned = coinsForScore(correct, questions.length);
+      recordSkill(correct, effectiveTotal);
+      finishDay(correct, effectiveTotal, wrongs);
+      const earned = coinsForScore(correct, effectiveTotal);
       earnCoins(earned);
       navigate("/result", {
         state: {
           questions,
           answers: nextAnswers,
           correct,
-          total: questions.length,
+          total: effectiveTotal,
           coinsEarned: earned,
         },
       });
@@ -93,6 +142,10 @@ export default function QuizPage() {
       setCurrent((c) => c + 1);
     }
   };
+
+  const isSkipped = currentAnswer === ("__skipped__" as unknown as UserAnswer);
+  const elimList = eliminated[current] ?? [];
+  const hintFirstChar = q.choices?.[q.answerIndex ?? -1]?.[0] ?? "";
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -146,7 +199,34 @@ export default function QuizPage() {
             {q.question}
           </h2>
 
-          {typing ? (
+          {/* 힌트 표시 */}
+          {hintShown.has(current) && !typing && (
+            <div className="mt-3 inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700">
+              <div className="w-4 h-4 flex items-center justify-center">
+                <i className="ri-lightbulb-flash-line"></i>
+              </div>
+              정답의 첫 글자: <span className="font-bold">{hintFirstChar}</span>
+            </div>
+          )}
+          {hintShown.has(current) && typing && (
+            <div className="mt-3 inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700">
+              <div className="w-4 h-4 flex items-center justify-center">
+                <i className="ri-lightbulb-flash-line"></i>
+              </div>
+              정답 길이: <span className="font-bold">{(q.accept?.[0] ?? "").length}글자</span>
+            </div>
+          )}
+
+          {isSkipped ? (
+            <div className="mt-6 rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-700">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 flex items-center justify-center">
+                  <i className="ri-skip-forward-line"></i>
+                </div>
+                패스권으로 넘긴 문제예요. 오답노트에 들어가지 않아요.
+              </div>
+            </div>
+          ) : typing ? (
             <div className="mt-6">
               <input
                 type="text"
@@ -173,6 +253,20 @@ export default function QuizPage() {
             <div className="mt-6 space-y-3">
               {q.choices?.map((choice, i) => {
                 const active = currentAnswer === i;
+                const isElim = elimList.includes(i);
+                if (isElim) {
+                  return (
+                    <div
+                      key={i}
+                      className="flex w-full items-center gap-3 rounded-lg border border-stone-200 bg-stone-50 p-4 opacity-40 line-through"
+                    >
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full border border-stone-200 bg-white text-xs font-bold text-stone-300">
+                        {["①", "②", "③", "④"][i] || i + 1}
+                      </span>
+                      <span className="text-sm text-stone-400">{choice}</span>
+                    </div>
+                  );
+                }
                 return (
                   <button
                     key={i}
@@ -199,10 +293,57 @@ export default function QuizPage() {
             </div>
           )}
 
-          <div className="mt-8 flex justify-end">
+          {/* 아이템 버튼 영역 */}
+          {!isSkipped && (
+            <div className="mt-5 flex flex-wrap gap-2 border-t border-stone-100 pt-4">
+              <button
+                onClick={useHint}
+                disabled={hintCount <= 0 || hintShown.has(current)}
+                className="inline-flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-40 whitespace-nowrap cursor-pointer"
+              >
+                <div className="w-3.5 h-3.5 flex items-center justify-center">
+                  <i className="ri-lightbulb-flash-line"></i>
+                </div>
+                힌트 ({hintCount})
+              </button>
+              {!typing && (
+                <button
+                  onClick={useFiftyFifty}
+                  disabled={fiftyCount <= 0 || !!eliminated[current]}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40 whitespace-nowrap cursor-pointer"
+                >
+                  <div className="w-3.5 h-3.5 flex items-center justify-center">
+                    <i className="ri-scissors-cut-line"></i>
+                  </div>
+                  50·50 ({fiftyCount})
+                </button>
+              )}
+              <button
+                onClick={skipQuestion}
+                disabled={skipCount <= 0}
+                className="inline-flex items-center gap-1.5 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-700 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-40 whitespace-nowrap cursor-pointer"
+              >
+                <div className="w-3.5 h-3.5 flex items-center justify-center">
+                  <i className="ri-skip-forward-line"></i>
+                </div>
+                패스 ({skipCount})
+              </button>
+              <a
+                href="/store"
+                className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-xs font-semibold text-stone-600 transition hover:bg-stone-100 whitespace-nowrap cursor-pointer"
+              >
+                <div className="w-3.5 h-3.5 flex items-center justify-center">
+                  <i className="ri-store-2-line"></i>
+                </div>
+                상점
+              </a>
+            </div>
+          )}
+
+          <div className="mt-6 flex justify-end">
             <button
               onClick={goNext}
-              disabled={!answered}
+              disabled={!answered && !isSkipped}
               className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-stone-300 whitespace-nowrap cursor-pointer"
             >
               {isLast ? "제출하고 결과 보기" : "다음 문제"}

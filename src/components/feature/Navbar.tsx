@@ -8,6 +8,7 @@ const nav = [
   { to: "/", label: "홈", icon: "ri-home-4-line" },
   { to: "/quiz", label: "오늘의 학습", icon: "ri-edit-box-line" },
   { to: "/gacha", label: "호기심 뽑기", icon: "ri-box-3-line" },
+  { to: "/store", label: "상점", icon: "ri-store-2-line" },
   { to: "/wrong-note", label: "오답노트", icon: "ri-file-list-3-line" },
 ];
 

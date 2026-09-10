@@ -1,6 +1,8 @@
 import { useCallback, useSyncExternalStore } from "react";
 import { CURIOSITY_CARDS } from "@/mocks/cards";
 import type { CuriosityCard } from "@/mocks/cards";
+import { STORE_ITEMS } from "@/mocks/store";
+import type { StoreItemId } from "@/mocks/store";
 
 // 게임 규칙 상수
 export const PULL_COST = 1; // 뽑기 1회 코인
@@ -28,12 +30,21 @@ export interface GiftClaim {
   date: string;
 }
 
+export type Inventory = Record<StoreItemId, number>;
+
 export interface GameState {
   coins: number;
   collected: string[]; // 획득한 카드 id 목록 (중복 없음, 도감)
   claims: GiftClaim[]; // 수령 신청 완료 기록
   pity: number; // 성공(카드) 없이 뽑은 누적 횟수 (천장)
   pityBreaks: number; // 확정 보상(천장 발동)을 받은 누적 횟수 (기준 증가)
+  inventory: Inventory; // 상점에서 구매한 소모성 아이템 보유량
+}
+
+function emptyInventory(): Inventory {
+  const inv = {} as Inventory;
+  for (const item of STORE_ITEMS) inv[item.id] = 0;
+  return inv;
 }
 
 const initialState: GameState = {
@@ -42,6 +53,7 @@ const initialState: GameState = {
   claims: [],
   pity: 0,
   pityBreaks: 0,
+  inventory: emptyInventory(),
 };
 
 export type DrawResult =
@@ -69,7 +81,11 @@ function loadState(): GameState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return initialState;
     const parsed = JSON.parse(raw) as Partial<GameState>;
-    return { ...initialState, ...parsed };
+    return {
+      ...initialState,
+      ...parsed,
+      inventory: { ...emptyInventory(), ...parsed.inventory },
+    };
   } catch {
     return initialState;
   }
@@ -164,11 +180,17 @@ export function useGame() {
     if (cur.collected.length >= GIFT_TARGET) {
       return { ok: false, reason: "ready" };
     }
-    if (cur.coins < PULL_COST) {
+
+    // 무료 뽑기권이 있으면 코인 대신 소모
+    const useTicket = cur.inventory.freeTicket > 0;
+    if (!useTicket && cur.coins < PULL_COST) {
       return { ok: false, reason: "no-coin" };
     }
 
-    const coinsAfter = cur.coins - PULL_COST;
+    const coinsAfter = useTicket ? cur.coins : cur.coins - PULL_COST;
+    const invAfter: Inventory = useTicket
+      ? { ...cur.inventory, freeTicket: cur.inventory.freeTicket - 1 }
+      : cur.inventory;
     const pityTarget = pityTargetFor(cur.pityBreaks);
 
     // 천장: 해당 기준 횟수 연속 성공 없음 → 이번 뽑기 무조건 카드 (전체에서 랜덤)
@@ -176,7 +198,7 @@ export function useGame() {
       const card =
         CURIOSITY_CARDS[Math.floor(Math.random() * CURIOSITY_CARDS.length)];
       const { state: ns, card: c, isNew } = grantCard(
-        { ...cur, coins: coinsAfter, pityBreaks: cur.pityBreaks + 1 },
+        { ...cur, coins: coinsAfter, inventory: invAfter, pityBreaks: cur.pityBreaks + 1 },
         card,
       );
       setState(ns);
@@ -190,7 +212,7 @@ export function useGame() {
       const card =
         LEGEND_CARDS[Math.floor(Math.random() * LEGEND_CARDS.length)];
       const { state: ns, card: c, isNew } = grantCard(
-        { ...cur, coins: coinsAfter },
+        { ...cur, coins: coinsAfter, inventory: invAfter },
         card,
       );
       setState(ns);
@@ -201,7 +223,7 @@ export function useGame() {
       const card =
         NORMAL_CARDS[Math.floor(Math.random() * NORMAL_CARDS.length)];
       const { state: ns, card: c, isNew } = grantCard(
-        { ...cur, coins: coinsAfter },
+        { ...cur, coins: coinsAfter, inventory: invAfter },
         card,
       );
       setState(ns);
@@ -209,7 +231,7 @@ export function useGame() {
     }
     // 코인 +5 (11% ~ 21%)
     if (roll < LEGEND_PROBABILITY + CARD_PROBABILITY + COIN5_PROBABILITY) {
-      setState({ ...cur, coins: coinsAfter + 5, pity: cur.pity + 1 });
+      setState({ ...cur, coins: coinsAfter + 5, inventory: invAfter, pity: cur.pity + 1 });
       return { ok: true, kind: "coin", amount: 5 };
     }
     // 코인 +1 (21% ~ 41%)
@@ -217,13 +239,13 @@ export function useGame() {
       roll <
       LEGEND_PROBABILITY + CARD_PROBABILITY + COIN5_PROBABILITY + COIN1_PROBABILITY
     ) {
-      setState({ ...cur, coins: coinsAfter + 1, pity: cur.pity + 1 });
+      setState({ ...cur, coins: coinsAfter + 1, inventory: invAfter, pity: cur.pity + 1 });
       return { ok: true, kind: "coin", amount: 1 };
     }
     // 꽝 (41% ~ 100%)
     const message =
       FAIL_LINES[Math.floor(Math.random() * FAIL_LINES.length)];
-    setState({ ...cur, coins: coinsAfter, pity: cur.pity + 1 });
+    setState({ ...cur, coins: coinsAfter, inventory: invAfter, pity: cur.pity + 1 });
     return { ok: true, kind: "fail", message };
   }, [grantCard]);
 
@@ -258,9 +280,56 @@ export function useGame() {
     [commit],
   );
 
+  // 상점에서 아이템 구매
+  const buyItem = useCallback(
+    (itemId: StoreItemId): { ok: boolean; reason?: string } => {
+      const cur = getState();
+      const item = STORE_ITEMS.find((s) => s.id === itemId);
+      if (!item) return { ok: false, reason: "no-item" };
+      if (cur.coins < item.price) return { ok: false, reason: "no-coin" };
+      commit({
+        ...cur,
+        coins: cur.coins - item.price,
+        inventory: {
+          ...cur.inventory,
+          [itemId]: (cur.inventory[itemId] ?? 0) + 1,
+        },
+      });
+      return { ok: true };
+    },
+    [commit],
+  );
+
+  // 소모성 아이템 사용 (1개 차감)
+  const useItem = useCallback(
+    (itemId: StoreItemId): boolean => {
+      const cur = getState();
+      if ((cur.inventory[itemId] ?? 0) <= 0) return false;
+      commit({
+        ...cur,
+        inventory: {
+          ...cur.inventory,
+          [itemId]: cur.inventory[itemId] - 1,
+        },
+      });
+      return true;
+    },
+    [commit],
+  );
+
   const resetAll = useCallback(() => {
-    commit({ ...initialState });
+    commit({ ...initialState, inventory: emptyInventory() });
   }, [commit]);
 
-  return { state, earnCoins, draw, draw10, completeClaim, resetAll, giftReady };
+  return {
+    state,
+    earnCoins,
+    draw,
+    draw10,
+    completeClaim,
+    resetAll,
+    giftReady,
+    buyItem,
+    useItem,
+  };
 }

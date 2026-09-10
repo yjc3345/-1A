@@ -100,6 +100,15 @@ export default function Home() {
                 </div>
                 호기심 뽑기 ({gameState.coins}코인)
               </Link>
+              <Link
+                to="/store"
+                className="inline-flex items-center gap-2 rounded-md bg-white/15 px-5 py-3 text-sm font-semibold text-white hover:bg-white/25 whitespace-nowrap cursor-pointer"
+              >
+                <div className="w-4 h-4 flex items-center justify-center">
+                  <i className="ri-store-2-line"></i>
+                </div>
+                상점
+              </Link>
             </div>
           </div>
           <div className="pointer-events-none absolute -right-10 -top-10 h-64 w-64 rounded-full bg-white/10"></div>

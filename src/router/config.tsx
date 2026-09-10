@@ -5,6 +5,7 @@ import Quiz from "../pages/quiz/page";
 import Result from "../pages/result/page";
 import WrongNote from "../pages/wrong-note/page";
 import Gacha from "../pages/gacha/page";
+import Store from "../pages/store/page";
 
 const routes: RouteObject[] = [
   { path: "/", element: <Home /> },
@@ -12,6 +13,7 @@ const routes: RouteObject[] = [
   { path: "/result", element: <Result /> },
   { path: "/wrong-note", element: <WrongNote /> },
   { path: "/gacha", element: <Gacha /> },
+  { path: "/store", element: <Store /> },
   { path: "*", element: <NotFound /> },
 ];
 
