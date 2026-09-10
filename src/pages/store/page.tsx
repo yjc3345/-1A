@@ -7,6 +7,16 @@ import { STORE_ITEMS } from "@/mocks/store";
 
 const COUPON_PRICE = 100;
 
+  const handleCheatCoins = () => {
+    if (typeof addCoins === "function") {
+      addCoins(100);
+    } else {
+      // addCoins가 hook에 없을 경우 direct state 변경 시도
+      state.coins += 100;
+    }
+    showToast("🧪 테스트용 100 코인이 지급되었습니다!", "ok");
+  };
+
 export default function StorePage() {
   const game = useGame();
   const { state, buyItem, addCoins, earnCoins, setCoins } = game as any;
