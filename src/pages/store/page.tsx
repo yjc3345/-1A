@@ -28,28 +28,6 @@ export default function StorePage() {
     window.setTimeout(() => setToast(null), 2500);
   };
 
-  const handleCheatCoins = () => {
-    if (typeof addCoins === "function") {
-      addCoins(100);
-    } else if (typeof earnCoins === "function") {
-      earnCoins(100);
-    } else if (typeof setCoins === "function") {
-      setCoins((prev: number) => prev + 100);
-    } else {
-      try {
-        const saved = localStorage.getItem("game_state") || "{}";
-        const parsed = JSON.parse(saved);
-        parsed.coins = (parsed.coins || 0) + 100;
-        localStorage.setItem("game_state", JSON.stringify(parsed));
-        window.location.reload();
-        return;
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    showToast("🧪 진짜 코인 100개가 적립되었습니다!", "ok");
-  };
-
   const handleBuy = () => {
     if ((state?.coins || 0) < COUPON_PRICE) {
       showToast("코인이 부족해요! 문제를 풀어 코인을 모아주세요.", "err");
@@ -96,14 +74,6 @@ export default function StorePage() {
           </div>
           
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleCheatCoins}
-              className="rounded-full bg-rose-500 px-3 py-1.5 text-xs font-bold text-white shadow hover:bg-rose-600 transition cursor-pointer"
-            >
-              🧪 +100 코인 충전
-            </button>
-
             <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700">
               <div className="w-4 h-4 flex items-center justify-center">
                 <i className="ri-coin-line"></i>
