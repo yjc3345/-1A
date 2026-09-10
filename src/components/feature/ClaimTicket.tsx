@@ -159,6 +159,7 @@ function drawTicket(
   ctx.fillText(label, cardX + 64, y);
   y += 56;
 
+  /*
   if (isPenalty && data.penalty) {
     ctx.fillStyle = "#9ca3af";
     ctx.font = `600 15px ${font}`;
@@ -168,7 +169,8 @@ function drawTicket(
     ctx.font = `600 20px ${font}`;
     y = wrapText(ctx, data.penalty, cardX + 44, y, cardW - 88, 32) + 40;
   }
-
+*/
+  
   ctx.fillStyle = "#9ca3af";
   ctx.font = `600 15px ${font}`;
   ctx.fillText("신청 날짜", cardX + 44, y);
