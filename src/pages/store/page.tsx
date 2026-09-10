@@ -9,7 +9,7 @@ const COUPON_PRICE = 100;
 
 export default function StorePage() {
   const game = useGame();
-  const { state, buyItem } = game;
+  const { state, buyItem, addCoins } = game; // addCoins 불러오기 (없을 경우를 대비해 아래 치트키 함수 작성)
   const [toast, setToast] = useState<{
     msg: string;
     tone: "ok" | "err";
@@ -22,6 +22,17 @@ export default function StorePage() {
   const showToast = (msg: string, tone: "ok" | "err") => {
     setToast({ msg, tone });
     window.setTimeout(() => setToast(null), 2500);
+  };
+
+  // 테스트용 100 코인 지급 치트키 함수
+  const handleCheatCoins = () => {
+    if (typeof addCoins === "function") {
+      addCoins(100);
+    } else {
+      // addCoins가 hook에 없을 경우 direct state 변경 시도
+      state.coins += 100;
+    }
+    showToast("🧪 테스트용 100 코인이 지급되었습니다!", "ok");
   };
 
   const handleBuy = () => {
@@ -65,11 +76,23 @@ export default function StorePage() {
               문제를 풀어 모은 코인으로 유용한 쿠폰을 구매해요!
             </p>
           </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700">
-            <div className="w-4 h-4 flex items-center justify-center">
-              <i className="ri-coin-line"></i>
+          
+          <div className="flex items-center gap-2">
+            {/* 🧪 테스트용 코인 100개 지급 버튼 */}
+            <button
+              type="button"
+              onClick={handleCheatCoins}
+              className="rounded-full bg-rose-500 px-3 py-1.5 text-xs font-bold text-white shadow hover:bg-rose-600 transition cursor-pointer"
+            >
+              🧪 +100 코인 충전
+            </button>
+
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700">
+              <div className="w-4 h-4 flex items-center justify-center">
+                <i className="ri-coin-line"></i>
+              </div>
+              {state.coins} 코인
             </div>
-            {state.coins} 코인
           </div>
         </div>
 
