@@ -180,17 +180,11 @@ export function useGame() {
     if (cur.collected.length >= GIFT_TARGET) {
       return { ok: false, reason: "ready" };
     }
-
-    // 무료 뽑기권이 있으면 코인 대신 소모
-    const useTicket = cur.inventory.freeTicket > 0;
-    if (!useTicket && cur.coins < PULL_COST) {
+    if (cur.coins < PULL_COST) {
       return { ok: false, reason: "no-coin" };
     }
 
-    const coinsAfter = useTicket ? cur.coins : cur.coins - PULL_COST;
-    const invAfter: Inventory = useTicket
-      ? { ...cur.inventory, freeTicket: cur.inventory.freeTicket - 1 }
-      : cur.inventory;
+    const coinsAfter = cur.coins - PULL_COST;
     const pityTarget = pityTargetFor(cur.pityBreaks);
 
     // 천장: 해당 기준 횟수 연속 성공 없음 → 이번 뽑기 무조건 카드 (전체에서 랜덤)
@@ -198,7 +192,7 @@ export function useGame() {
       const card =
         CURIOSITY_CARDS[Math.floor(Math.random() * CURIOSITY_CARDS.length)];
       const { state: ns, card: c, isNew } = grantCard(
-        { ...cur, coins: coinsAfter, inventory: invAfter, pityBreaks: cur.pityBreaks + 1 },
+        { ...cur, coins: coinsAfter, pityBreaks: cur.pityBreaks + 1 },
         card,
       );
       setState(ns);
@@ -212,7 +206,7 @@ export function useGame() {
       const card =
         LEGEND_CARDS[Math.floor(Math.random() * LEGEND_CARDS.length)];
       const { state: ns, card: c, isNew } = grantCard(
-        { ...cur, coins: coinsAfter, inventory: invAfter },
+        { ...cur, coins: coinsAfter },
         card,
       );
       setState(ns);
@@ -223,7 +217,7 @@ export function useGame() {
       const card =
         NORMAL_CARDS[Math.floor(Math.random() * NORMAL_CARDS.length)];
       const { state: ns, card: c, isNew } = grantCard(
-        { ...cur, coins: coinsAfter, inventory: invAfter },
+        { ...cur, coins: coinsAfter },
         card,
       );
       setState(ns);
@@ -231,7 +225,7 @@ export function useGame() {
     }
     // 코인 +5 (11% ~ 21%)
     if (roll < LEGEND_PROBABILITY + CARD_PROBABILITY + COIN5_PROBABILITY) {
-      setState({ ...cur, coins: coinsAfter + 5, inventory: invAfter, pity: cur.pity + 1 });
+      setState({ ...cur, coins: coinsAfter + 5, pity: cur.pity + 1 });
       return { ok: true, kind: "coin", amount: 5 };
     }
     // 코인 +1 (21% ~ 41%)
@@ -239,13 +233,13 @@ export function useGame() {
       roll <
       LEGEND_PROBABILITY + CARD_PROBABILITY + COIN5_PROBABILITY + COIN1_PROBABILITY
     ) {
-      setState({ ...cur, coins: coinsAfter + 1, inventory: invAfter, pity: cur.pity + 1 });
+      setState({ ...cur, coins: coinsAfter + 1, pity: cur.pity + 1 });
       return { ok: true, kind: "coin", amount: 1 };
     }
     // 꽝 (41% ~ 100%)
     const message =
       FAIL_LINES[Math.floor(Math.random() * FAIL_LINES.length)];
-    setState({ ...cur, coins: coinsAfter, inventory: invAfter, pity: cur.pity + 1 });
+    setState({ ...cur, coins: coinsAfter, pity: cur.pity + 1 });
     return { ok: true, kind: "fail", message };
   }, [grantCard]);
 
@@ -300,23 +294,6 @@ export function useGame() {
     [commit],
   );
 
-  // 소모성 아이템 사용 (1개 차감)
-  const useItem = useCallback(
-    (itemId: StoreItemId): boolean => {
-      const cur = getState();
-      if ((cur.inventory[itemId] ?? 0) <= 0) return false;
-      commit({
-        ...cur,
-        inventory: {
-          ...cur.inventory,
-          [itemId]: cur.inventory[itemId] - 1,
-        },
-      });
-      return true;
-    },
-    [commit],
-  );
-
   const resetAll = useCallback(() => {
     commit({ ...initialState, inventory: emptyInventory() });
   }, [commit]);
@@ -330,6 +307,5 @@ export function useGame() {
     resetAll,
     giftReady,
     buyItem,
-    useItem,
   };
 }

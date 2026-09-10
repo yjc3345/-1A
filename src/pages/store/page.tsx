@@ -1,38 +1,11 @@
 import { useState } from "react";
+import type { FormEvent } from "react";
 import Navbar from "@/components/feature/Navbar";
+import LeaveCoupon from "@/components/feature/LeaveCoupon";
 import { useGame } from "@/hooks/useGame";
 import { STORE_ITEMS } from "@/mocks/store";
-import type { StoreItem } from "@/mocks/store";
 
-const COLOR_MAP: Record<
-  string,
-  { bg: string; ring: string; text: string; btn: string }
-> = {
-  amber: {
-    bg: "bg-amber-50",
-    ring: "ring-amber-200",
-    text: "text-amber-700",
-    btn: "bg-amber-500 hover:bg-amber-600",
-  },
-  rose: {
-    bg: "bg-rose-50",
-    ring: "ring-rose-200",
-    text: "text-rose-700",
-    btn: "bg-rose-500 hover:bg-rose-600",
-  },
-  emerald: {
-    bg: "bg-emerald-50",
-    ring: "ring-emerald-200",
-    text: "text-emerald-700",
-    btn: "bg-emerald-500 hover:bg-emerald-600",
-  },
-  sky: {
-    bg: "bg-sky-50",
-    ring: "ring-sky-200",
-    text: "text-sky-700",
-    btn: "bg-sky-500 hover:bg-sky-600",
-  },
-};
+const COUPON_PRICE = 100;
 
 export default function StorePage() {
   const game = useGame();
@@ -41,35 +14,55 @@ export default function StorePage() {
     msg: string;
     tone: "ok" | "err";
   } | null>(null);
+  const [purchased, setPurchased] = useState(false);
+  const [name, setName] = useState("");
+  const [date, setDate] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
 
   const showToast = (msg: string, tone: "ok" | "err") => {
     setToast({ msg, tone });
-    window.setTimeout(() => setToast(null), 2200);
+    window.setTimeout(() => setToast(null), 2500);
   };
 
-  const handleBuy = (item: StoreItem) => {
-    if (state.coins < item.price) {
+  const handleBuy = () => {
+    if (state.coins < COUPON_PRICE) {
       showToast("코인이 부족해요! 문제를 풀어 코인을 모아주세요.", "err");
       return;
     }
-    const res = buyItem(item.id);
+    const res = buyItem("leaveCoupon");
     if (res.ok) {
-      showToast(`${item.name} 구매 완료! (${item.price}코인)`, "ok");
+      showToast("쿠폰 구매 완료! 아래에서 이름과 날짜를 입력해주세요.", "ok");
+      setPurchased(true);
     } else {
       showToast("구매에 실패했어요.", "err");
     }
   };
 
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setFormError(null);
+    if (!name.trim()) {
+      setFormError("이름을 입력해주세요.");
+      return;
+    }
+    if (!date) {
+      setFormError("하원 날짜를 선택해주세요.");
+      return;
+    }
+  };
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+
   return (
     <div className="min-h-screen bg-stone-50">
       <Navbar />
-      <main className="mx-auto max-w-5xl px-6 py-10">
+      <main className="mx-auto max-w-3xl px-6 py-10">
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-stone-900">코인 상점</h1>
             <p className="mt-1 text-sm text-stone-500">
-              문제를 풀어 모은 코인으로 유용한 아이템을 구매해요!
+              문제를 풀어 모은 코인으로 유용한 쿠폰을 구매해요!
             </p>
           </div>
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700">
@@ -80,66 +73,126 @@ export default function StorePage() {
           </div>
         </div>
 
-        {/* Items grid */}
-        <section className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-2">
-          {STORE_ITEMS.map((item) => {
-            const c = COLOR_MAP[item.color] ?? COLOR_MAP["emerald"];
-            const owned = state.inventory[item.id] ?? 0;
-            const canAfford = state.coins >= item.price;
-            return (
-              <div
-                key={item.id}
-                className={`relative rounded-2xl border border-stone-200 bg-white p-6 ring-1 ${c.ring} ${c.bg} transition`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-white text-3xl shadow-sm">
-                    {item.emoji}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base font-bold text-stone-900">
-                        {item.name}
-                      </h3>
-                      <span
-                        className={`inline-flex items-center rounded-full bg-white px-2 py-0.5 text-xs font-semibold ${c.text}`}
-                      >
-                        보유 {owned}개
-                      </span>
-                    </div>
-                    <p className="mt-1 text-sm leading-relaxed text-stone-600">
-                      {item.desc}
-                    </p>
-                  </div>
-                </div>
+        {/* Coupon product card */}
+        <section className="mt-8">
+          <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-8">
+            <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-emerald-200/30"></div>
+            <div className="pointer-events-none absolute -bottom-16 -left-8 h-40 w-40 rounded-full bg-teal-200/20"></div>
 
-                <div className="mt-5 flex items-center justify-between">
-                  <div className="inline-flex items-center gap-1.5 text-sm font-bold text-stone-700">
-                    <div className="w-4 h-4 flex items-center justify-center">
-                      <i className="ri-coin-line text-amber-500"></i>
-                    </div>
-                    {item.price} 코인
+            <div className="relative flex flex-col items-center text-center">
+              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white text-5xl shadow-sm">
+                🎫
+              </div>
+              <h2 className="mt-4 text-xl font-bold text-stone-900">
+                8시 학원 하원 쿠폰
+              </h2>
+              <p className="mt-2 max-w-md text-sm leading-relaxed text-stone-600">
+                100코인으로 구매하면, 이름과 날짜를 적어 하원 쿠폰 이미지를
+                만들 수 있어요. 카톡으로 보내거나 저장해서 선생님께
+                보여주세요.
+              </p>
+
+              <div className="mt-5 flex items-center gap-3">
+                <div className="inline-flex items-center gap-1.5 text-lg font-bold text-stone-800">
+                  <div className="w-5 h-5 flex items-center justify-center">
+                    <i className="ri-coin-line text-amber-500"></i>
                   </div>
+                  {COUPON_PRICE} 코인
+                </div>
+                {purchased ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white">
+                    <div className="w-4 h-4 flex items-center justify-center">
+                      <i className="ri-check-line"></i>
+                    </div>
+                    구매 완료
+                  </span>
+                ) : (
                   <button
-                    onClick={() => handleBuy(item)}
-                    disabled={!canAfford}
-                    className={`inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-bold text-white transition whitespace-nowrap cursor-pointer ${
-                      c.btn
-                    } ${
-                      !canAfford
-                        ? "cursor-not-allowed bg-stone-300 hover:bg-stone-300"
-                        : ""
+                    onClick={handleBuy}
+                    disabled={state.coins < COUPON_PRICE}
+                    className={`inline-flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-bold text-white transition whitespace-nowrap cursor-pointer ${
+                      state.coins < COUPON_PRICE
+                        ? "cursor-not-allowed bg-stone-300"
+                        : "bg-emerald-600 hover:bg-emerald-700"
                     }`}
                   >
                     <div className="w-4 h-4 flex items-center justify-center">
                       <i className="ri-shopping-cart-2-line"></i>
                     </div>
-                    {canAfford ? "구매하기" : "코인 부족"}
+                    {state.coins < COUPON_PRICE ? "코인 부족" : "구매하기"}
                   </button>
-                </div>
+                )}
               </div>
-            );
-          })}
+            </div>
+          </div>
         </section>
+
+        {/* Name + Date input → Coupon image */}
+        {purchased && (
+          <section className="mt-8 space-y-6">
+            <div className="rounded-2xl border border-stone-200 bg-white p-6">
+              <h3 className="text-base font-bold text-stone-900">
+                쿠폰 정보 입력
+              </h3>
+              <p className="mt-1 text-sm text-stone-500">
+                이름과 하원 날짜를 적으면 쿠폰 이미지가 만들어져요.
+              </p>
+
+              <form
+                onSubmit={handleSubmit}
+                className="mt-5 space-y-5"
+                noValidate
+              >
+                <div>
+                  <label
+                    htmlFor="coupon-name"
+                    className="mb-1.5 block text-sm font-semibold text-stone-800"
+                  >
+                    학생 이름 <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    id="coupon-name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    autoComplete="name"
+                    placeholder="예) 김하늘"
+                    className="w-full rounded-md border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="coupon-date"
+                    className="mb-1.5 block text-sm font-semibold text-stone-800"
+                  >
+                    하원 날짜 <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    id="coupon-date"
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    min={todayStr}
+                    required
+                    className="w-full rounded-md border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                  />
+                </div>
+
+                {formError && (
+                  <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+                    {formError}
+                  </div>
+                )}
+              </form>
+            </div>
+
+            {name.trim() && date && (
+              <LeaveCoupon name={name.trim()} date={date} />
+            )}
+          </section>
+        )}
 
         {/* How to earn coins */}
         <section className="mt-8 rounded-2xl border border-stone-200 bg-white p-6">

@@ -150,14 +150,6 @@ export default function GachaPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {(state.inventory.freeTicket ?? 0) > 0 && (
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700">
-                <div className="w-4 h-4 flex items-center justify-center">
-                  <i className="ri-coupon-3-line"></i>
-                </div>
-                무료 뽑기권 {state.inventory.freeTicket}장
-              </div>
-            )}
             <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700">
               <div className="w-4 h-4 flex items-center justify-center">
                 <i className="ri-coin-line"></i>
@@ -194,7 +186,7 @@ export default function GachaPage() {
               <div className="w-3.5 h-3.5 flex items-center justify-center">
                 <i className="ri-gift-2-line"></i>
               </div>
-              뽑기 1회 = {PULL_COST}코인 · 성공 시 신기한 카드 등장!{(state.inventory.freeTicket ?? 0) > 0 ? " · 무료 뽑기권이 있어요!" : ""}
+              뽑기 1회 = {PULL_COST}코인 · 성공 시 신기한 카드 등장!
             </p>
 
             {/* Result area */}
@@ -328,7 +320,7 @@ export default function GachaPage() {
                 <div className="w-5 h-5 flex items-center justify-center">
                   <i className="ri-coin-line"></i>
                 </div>
-                {giftReady ? "보상 선택하기 ↓" : (state.inventory.freeTicket ?? 0) > 0 ? `뽑기 (무료권 ${state.inventory.freeTicket}장)` : `뽑기 (${PULL_COST}코인)`}
+                {giftReady ? "보상 선택하기 ↓" : `뽑기 (${PULL_COST}코인)`}
               </button>
 
               <button
