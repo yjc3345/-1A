@@ -9,7 +9,8 @@ const COUPON_PRICE = 100;
 
 export default function StorePage() {
   const game = useGame();
-  const { state, buyItem, addCoins } = game; // addCoins 불러오기 (없을 경우를 대비해 아래 치트키 함수 작성)
+  const { state, buyItem, addCoins, earnCoins, setCoins } = game as any;
+
   const [toast, setToast] = useState<{
     msg: string;
     tone: "ok" | "err";
@@ -18,30 +19,44 @@ export default function StorePage() {
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  
+  // 💡 쿠폰 최종 발급 완료 상태 (발급 완료 시 입력폼 숨김 처리)
+  const [isIssued, setIsIssued] = useState(false);
 
   const showToast = (msg: string, tone: "ok" | "err") => {
     setToast({ msg, tone });
     window.setTimeout(() => setToast(null), 2500);
   };
 
-  // 테스트용 100 코인 지급 치트키 함수
   const handleCheatCoins = () => {
     if (typeof addCoins === "function") {
       addCoins(100);
+    } else if (typeof earnCoins === "function") {
+      earnCoins(100);
+    } else if (typeof setCoins === "function") {
+      setCoins((prev: number) => prev + 100);
     } else {
-      // addCoins가 hook에 없을 경우 direct state 변경 시도
-      state.coins += 100;
+      try {
+        const saved = localStorage.getItem("game_state") || "{}";
+        const parsed = JSON.parse(saved);
+        parsed.coins = (parsed.coins || 0) + 100;
+        localStorage.setItem("game_state", JSON.stringify(parsed));
+        window.location.reload();
+        return;
+      } catch (e) {
+        console.error(e);
+      }
     }
-    showToast("🧪 테스트용 100 코인이 지급되었습니다!", "ok");
+    showToast("🧪 진짜 코인 100개가 적립되었습니다!", "ok");
   };
 
   const handleBuy = () => {
-    if (state.coins < COUPON_PRICE) {
+    if ((state?.coins || 0) < COUPON_PRICE) {
       showToast("코인이 부족해요! 문제를 풀어 코인을 모아주세요.", "err");
       return;
     }
     const res = buyItem("leaveCoupon");
-    if (res.ok) {
+    if (res?.ok) {
       showToast("쿠폰 구매 완료! 아래에서 이름과 날짜를 입력해주세요.", "ok");
       setPurchased(true);
     } else {
@@ -49,6 +64,7 @@ export default function StorePage() {
     }
   };
 
+  // 💡 이름/날짜 입력 후 쿠폰 발급 확정
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setFormError(null);
@@ -60,6 +76,8 @@ export default function StorePage() {
       setFormError("하원 날짜를 선택해주세요.");
       return;
     }
+    setIsIssued(true);
+    showToast("🎉 하원 쿠폰이 발급되었습니다!", "ok");
   };
 
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -78,7 +96,6 @@ export default function StorePage() {
           </div>
           
           <div className="flex items-center gap-2">
-            {/* 🧪 테스트용 코인 100개 지급 버튼 */}
             <button
               type="button"
               onClick={handleCheatCoins}
@@ -91,7 +108,7 @@ export default function StorePage() {
               <div className="w-4 h-4 flex items-center justify-center">
                 <i className="ri-coin-line"></i>
               </div>
-              {state.coins} 코인
+              {state?.coins || 0} 코인
             </div>
           </div>
         </div>
@@ -127,14 +144,14 @@ export default function StorePage() {
                     <div className="w-4 h-4 flex items-center justify-center">
                       <i className="ri-check-line"></i>
                     </div>
-                    구매 완료
+                    {isIssued ? "쿠폰 사용/발급 완료" : "구매 완료"}
                   </span>
                 ) : (
                   <button
                     onClick={handleBuy}
-                    disabled={state.coins < COUPON_PRICE}
+                    disabled={(state?.coins || 0) < COUPON_PRICE}
                     className={`inline-flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-bold text-white transition whitespace-nowrap cursor-pointer ${
-                      state.coins < COUPON_PRICE
+                      (state?.coins || 0) < COUPON_PRICE
                         ? "cursor-not-allowed bg-stone-300"
                         : "bg-emerald-600 hover:bg-emerald-700"
                     }`}
@@ -142,7 +159,7 @@ export default function StorePage() {
                     <div className="w-4 h-4 flex items-center justify-center">
                       <i className="ri-shopping-cart-2-line"></i>
                     </div>
-                    {state.coins < COUPON_PRICE ? "코인 부족" : "구매하기"}
+                    {(state?.coins || 0) < COUPON_PRICE ? "코인 부족" : "구매하기"}
                   </button>
                 )}
               </div>
@@ -153,64 +170,80 @@ export default function StorePage() {
         {/* Name + Date input → Coupon image */}
         {purchased && (
           <section className="mt-8 space-y-6">
-            <div className="rounded-2xl border border-stone-200 bg-white p-6">
-              <h3 className="text-base font-bold text-stone-900">
-                쿠폰 정보 입력
-              </h3>
-              <p className="mt-1 text-sm text-stone-500">
-                이름과 하원 날짜를 적으면 쿠폰 이미지가 만들어져요.
-              </p>
+            {/* 💡 아직 발급 확정을 안 눌렀을 때만 입력 폼을 보여줍니다 */}
+            {!isIssued ? (
+              <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+                <h3 className="text-base font-bold text-stone-900">
+                  쿠폰 정보 입력
+                </h3>
+                <p className="mt-1 text-sm text-stone-500">
+                  이름과 하원 날짜를 적고 발급 완료 버튼을 눌러주세요.
+                </p>
 
-              <form
-                onSubmit={handleSubmit}
-                className="mt-5 space-y-5"
-                noValidate
-              >
-                <div>
-                  <label
-                    htmlFor="coupon-name"
-                    className="mb-1.5 block text-sm font-semibold text-stone-800"
-                  >
-                    학생 이름 <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    id="coupon-name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    autoComplete="name"
-                    placeholder="예) 김하늘"
-                    className="w-full rounded-md border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="coupon-date"
-                    className="mb-1.5 block text-sm font-semibold text-stone-800"
-                  >
-                    하원 날짜 <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    id="coupon-date"
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    min={todayStr}
-                    required
-                    className="w-full rounded-md border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
-                  />
-                </div>
-
-                {formError && (
-                  <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
-                    {formError}
+                <form
+                  onSubmit={handleSubmit}
+                  className="mt-5 space-y-5"
+                  noValidate
+                >
+                  <div>
+                    <label
+                      htmlFor="coupon-name"
+                      className="mb-1.5 block text-sm font-semibold text-stone-800"
+                    >
+                      학생 이름 <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      id="coupon-name"
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      autoComplete="name"
+                      placeholder="예) 김하늘"
+                      className="w-full rounded-md border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                    />
                   </div>
-                )}
-              </form>
-            </div>
 
+                  <div>
+                    <label
+                      htmlFor="coupon-date"
+                      className="mb-1.5 block text-sm font-semibold text-stone-800"
+                    >
+                      하원 날짜 <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      id="coupon-date"
+                      type="date"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      min={todayStr}
+                      required
+                      className="w-full rounded-md border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                    />
+                  </div>
+
+                  {formError && (
+                    <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+                      {formError}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="w-full rounded-lg bg-emerald-600 py-3 text-sm font-bold text-white shadow hover:bg-emerald-700 transition cursor-pointer"
+                  >
+                    🎟️ 이 정보로 쿠폰 최종 발급하기
+                  </button>
+                </form>
+              </div>
+            ) : (
+              /* 💡 발급이 완료된 후 안내 문구 */
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center text-sm font-semibold text-emerald-800">
+                ✅ 쿠폰 발급이 완료되었습니다. 아래 완성된 쿠폰을 확인 및 공유해 주세요!
+              </div>
+            )}
+
+            {/* 발급된 최종 쿠폰 카드 표시 */}
             {name.trim() && date && (
               <LeaveCoupon name={name.trim()} date={date} />
             )}
