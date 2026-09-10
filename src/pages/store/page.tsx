@@ -232,7 +232,7 @@ export default function StorePage() {
                     type="submit"
                     className="w-full rounded-lg bg-emerald-600 py-3 text-sm font-bold text-white shadow hover:bg-emerald-700 transition cursor-pointer"
                   >
-                    🎟️ 이 정보로 쿠폰 최종 발급하기
+                    🎟️ 이 정보로 쿠폰 최종 발급하기(수정 불가능)
                   </button>
                 </form>
               </div>
