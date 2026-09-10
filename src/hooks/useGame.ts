@@ -21,12 +21,8 @@ export function pityTargetFor(pityBreaks: number): number {
 
 const STORAGE_KEY = "game_v1";
 
-export type RewardChoice = "giftcon" | "penalty";
-
 export interface GiftClaim {
   name: string;
-  choice: RewardChoice;
-  penalty?: string;
   date: string;
 }
 
@@ -256,7 +252,7 @@ export function useGame() {
   }, [draw]);
 
   const completeClaim = useCallback(
-    (name: string, choice: RewardChoice, penalty?: string) => {
+    (name: string) => {
       const cur = getState();
       const d = new Date();
       const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
@@ -268,7 +264,7 @@ export function useGame() {
         collected: [], // 새 라운드 시작: 도감 초기화
         pity: 0,
         pityBreaks: 0, // 새 라운드 시작: 확정 보상 기준 초기화
-        claims: [...cur.claims, { name, choice, penalty, date }],
+        claims: [...cur.claims, { name, date }],
       });
     },
     [commit],

@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import type { RewardChoice } from "@/hooks/useGame";
 
 interface Props {
   name: string;
-  choice: RewardChoice;
-  penalty?: string;
 }
 
 const CANVAS_W = 600;
@@ -28,30 +25,6 @@ function roundRect(
   ctx.closePath();
 }
 
-function wrapText(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  x: number,
-  y: number,
-  maxWidth: number,
-  lineHeight: number,
-): number {
-  let line = "";
-  let curY = y;
-  for (const ch of text) {
-    const test = line + ch;
-    if (line && ctx.measureText(test).width > maxWidth) {
-      ctx.fillText(line, x, curY);
-      line = ch;
-      curY += lineHeight;
-    } else {
-      line = test;
-    }
-  }
-  if (line) ctx.fillText(line, x, curY);
-  return curY;
-}
-
 function drawTicket(
   ctx: CanvasRenderingContext2D,
   data: Props,
@@ -59,11 +32,9 @@ function drawTicket(
 ) {
   const W = CANVAS_W;
   const H = CANVAS_H;
-  const isPenalty = data.choice === "penalty";
-
-  const primary = isPenalty ? "#e11d48" : "#059669";
-  const accent = isPenalty ? "#fb923c" : "#10b981";
-  const primaryLight = isPenalty ? "#fff1f2" : "#ecfdf5";
+  const primary = "#059669";
+  const accent = "#10b981";
+  const primaryLight = "#ecfdf5";
   const font =
     "'Pretendard','Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif";
 
@@ -75,7 +46,7 @@ function drawTicket(
   ctx.fillRect(0, 0, W, H);
 
   // 장식 원
-  ctx.fillStyle = isPenalty ? "rgba(225,29,72,0.08)" : "rgba(16,185,129,0.08)";
+  ctx.fillStyle = "rgba(16,185,129,0.08)";
   ctx.beginPath();
   ctx.arc(W - 40, 120, 150, 0, Math.PI * 2);
   ctx.fill();
@@ -115,10 +86,10 @@ function drawTicket(
 
   ctx.fillStyle = "#ffffff";
   ctx.font = `800 34px ${font}`;
-  ctx.fillText(isPenalty ? "벌칙 신청서" : "기프트콘 신청서", W / 2, cardY + 92);
+  ctx.fillText("기프트콘 신청서", W / 2, cardY + 92);
 
   ctx.font = "54px sans-serif";
-  ctx.fillText(isPenalty ? "😜" : "🎁", W / 2, cardY + 168);
+  ctx.fillText("🎁", W / 2, cardY + 168);
 
   // 절취선
   const perfY = cardY + headerH;
@@ -149,7 +120,7 @@ function drawTicket(
   ctx.font = `600 15px ${font}`;
   ctx.fillText("선택", cardX + 44, y);
   y += 34;
-  const label = isPenalty ? "벌칙 시키기" : "기프트콘 신청";
+  const label = "기프트콘 신청";
   ctx.font = `700 17px ${font}`;
   const labelW = ctx.measureText(label).width + 40;
   ctx.fillStyle = primaryLight;
@@ -158,16 +129,6 @@ function drawTicket(
   ctx.fillStyle = primary;
   ctx.fillText(label, cardX + 64, y);
   y += 56;
-
-  if (isPenalty && data.penalty) {
-    ctx.fillStyle = "#9ca3af";
-    ctx.font = `600 15px ${font}`;
-    ctx.fillText("벌칙 내용", cardX + 44, y);
-    y += 32;
-    ctx.fillStyle = "#111827";
-    ctx.font = `600 20px ${font}`;
-    y = wrapText(ctx, data.penalty, cardX + 44, y, cardW - 88, 32) + 40;
-  }
 
   ctx.fillStyle = "#9ca3af";
   ctx.font = `600 15px ${font}`;
@@ -188,12 +149,11 @@ function drawTicket(
   );
 }
 
-export default function ClaimTicket({ name, choice, penalty }: Props) {
+export default function ClaimTicket({ name }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const blobRef = useRef<Blob | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const isPenalty = choice === "penalty";
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -210,12 +170,12 @@ export default function ClaimTicket({ name, choice, penalty }: Props) {
       "0",
     )}.${String(d.getDate()).padStart(2, "0")}`;
 
-    drawTicket(ctx, { name, choice, penalty }, date);
+    drawTicket(ctx, { name }, date);
     setImageUrl(canvas.toDataURL("image/png"));
     canvas.toBlob((blob) => {
       blobRef.current = blob;
     }, "image/png");
-  }, [name, choice, penalty]);
+  }, [name]);
 
   const handleShare = async () => {
     setNotice(null);
@@ -229,8 +189,8 @@ export default function ClaimTicket({ name, choice, penalty }: Props) {
     const file = new File([blob], "claim-ticket.png", { type: "image/png" });
     const shareData = {
       files: [file],
-      title: isPenalty ? "벌칙 신청서" : "기프트콘 신청서",
-      text: `${name}님의 ${isPenalty ? "벌칙 신청서" : "기프트콘 신청서"}`,
+      title: "기프트콘 신청서",
+      text: `${name}님의 기프트콘 신청서`,
     };
 
     if (
@@ -257,7 +217,7 @@ export default function ClaimTicket({ name, choice, penalty }: Props) {
     if (!imageUrl) return;
     const a = document.createElement("a");
     a.href = imageUrl;
-    a.download = `${isPenalty ? "penalty" : "giftcon"}-claim.png`;
+    a.download = "giftcon-claim.png";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -269,7 +229,7 @@ export default function ClaimTicket({ name, choice, penalty }: Props) {
       {imageUrl ? (
         <img
           src={imageUrl}
-          alt={`${name}님의 ${isPenalty ? "벌칙" : "기프트콘"} 신청서`}
+          alt={`${name}님의 기프트콘 신청서`}
           className="mx-auto w-full max-w-sm rounded-lg border border-stone-200"
         />
       ) : (

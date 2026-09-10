@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 interface Props {
   name: string;
   date: string;
+  variant?: "leave" | "weekend-exemption";
 }
 
 const CANVAS_W = 600;
@@ -56,18 +57,19 @@ function drawCoupon(
 ) {
   const W = CANVAS_W;
   const H = CANVAS_H;
+  const isWeekend = data.variant === "weekend-exemption";
   const font =
     "'Pretendard','Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif";
 
   // 배경 그라데이션
   const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, "#ecfdf5");
+  bg.addColorStop(0, isWeekend ? "#f5f3ff" : "#ecfdf5");
   bg.addColorStop(1, "#ffffff");
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
   // 장식 원
-  ctx.fillStyle = "rgba(16,185,129,0.08)";
+  ctx.fillStyle = isWeekend ? "rgba(124,58,237,0.08)" : "rgba(16,185,129,0.08)";
   ctx.beginPath();
   ctx.arc(W - 40, 120, 150, 0, Math.PI * 2);
   ctx.fill();
@@ -94,8 +96,8 @@ function drawCoupon(
   roundRect(ctx, cardX, cardY, cardW, headerH, 28);
   ctx.clip();
   const head = ctx.createLinearGradient(cardX, 0, cardX + cardW, 0);
-  head.addColorStop(0, "#059669");
-  head.addColorStop(1, "#10b981");
+  head.addColorStop(0, isWeekend ? "#7c3aed" : "#059669");
+  head.addColorStop(1, isWeekend ? "#a78bfa" : "#10b981");
   ctx.fillStyle = head;
   ctx.fillRect(cardX, cardY, cardW, headerH);
   ctx.restore();
@@ -107,10 +109,10 @@ function drawCoupon(
 
   ctx.fillStyle = "#ffffff";
   ctx.font = `800 36px ${font}`;
-  ctx.fillText("8시 학원 하원 쿠폰", W / 2, cardY + 96);
+  ctx.fillText(isWeekend ? "주말 보강 면제 쿠폰" : "8시 학원 하원 쿠폰", W / 2, cardY + 96);
 
   ctx.font = "60px sans-serif";
-  ctx.fillText("🎫", W / 2, cardY + 180);
+  ctx.fillText(isWeekend ? "🗓️" : "🎫", W / 2, cardY + 180);
 
   // 절취선
   const perfY = cardY + headerH;
@@ -138,7 +140,7 @@ function drawCoupon(
 
   ctx.fillStyle = "#9ca3af";
   ctx.font = `600 15px ${font}`;
-  ctx.fillText("하원 날짜", cardX + 44, y);
+  ctx.fillText(isWeekend ? "면제 날짜" : "하원 날짜", cardX + 44, y);
   y += 32;
   ctx.fillStyle = "#111827";
   ctx.font = `800 30px ${font}`;
@@ -146,9 +148,9 @@ function drawCoupon(
   y += 54;
 
   // 안내 문구
-  ctx.fillStyle = "#059669";
+  ctx.fillStyle = isWeekend ? "#7c3aed" : "#059669";
   ctx.font = `700 18px ${font}`;
-  ctx.fillText("위 학생은 아래 날짜에 8시 학원을 하원합니다.", cardX + 44, y);
+  ctx.fillText(isWeekend ? "위 학생은 해당 날짜의 주말 보강을 면제받습니다." : "위 학생은 아래 날짜에 8시 학원을 하원합니다.", cardX + 44, y);
   y += 30;
   ctx.fillStyle = "#6b7280";
   ctx.font = `600 15px ${font}`;
@@ -165,7 +167,8 @@ function drawCoupon(
   );
 }
 
-export default function LeaveCoupon({ name, date }: Props) {
+export default function LeaveCoupon({ name, date, variant = "leave" }: Props) {
+  const isWeekend = variant === "weekend-exemption";
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const blobRef = useRef<Blob | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -180,12 +183,12 @@ export default function LeaveCoupon({ name, date }: Props) {
     if (!ctx) return;
     ctx.scale(SCALE, SCALE);
 
-    drawCoupon(ctx, { name, date });
+    drawCoupon(ctx, { name, date, variant });
     setImageUrl(canvas.toDataURL("image/png"));
     canvas.toBlob((blob) => {
       blobRef.current = blob;
     }, "image/png");
-  }, [name, date]);
+  }, [name, date, variant]);
 
   const handleShare = async () => {
     setNotice(null);
@@ -196,11 +199,13 @@ export default function LeaveCoupon({ name, date }: Props) {
     }
     if (!blob) return;
 
-    const file = new File([blob], "leave-coupon.png", { type: "image/png" });
+    const filename = isWeekend ? "weekend-makeup-exemption-coupon.png" : "leave-coupon.png";
+    const title = isWeekend ? "주말 보강 면제 쿠폰(고림전용)" : "8시 학원 하원 쿠폰";
+    const file = new File([blob], filename, { type: "image/png" });
     const shareData = {
       files: [file],
-      title: "8시 학원 하원 쿠폰",
-      text: `${name} 학생의 하원 쿠폰 (${date})`,
+      title,
+      text: `${name} 학생의 ${title} (${date})`,
     };
 
     if (
@@ -227,7 +232,7 @@ export default function LeaveCoupon({ name, date }: Props) {
     if (!imageUrl) return;
     const a = document.createElement("a");
     a.href = imageUrl;
-    a.download = "leave-coupon.png";
+    a.download = isWeekend ? "weekend-makeup-exemption-coupon.png" : "leave-coupon.png";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -239,7 +244,7 @@ export default function LeaveCoupon({ name, date }: Props) {
       {imageUrl ? (
         <img
           src={imageUrl}
-          alt={`${name} 학생의 하원 쿠폰`}
+          alt={`${name} 학생의 ${isWeekend ? "주말 보강 면제 쿠폰" : "하원 쿠폰"}`}
           className="mx-auto w-full max-w-sm rounded-lg border border-stone-200"
         />
       ) : (

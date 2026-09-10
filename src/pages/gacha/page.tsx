@@ -9,7 +9,6 @@ import {
   GIFT_TARGET,
   pityTargetFor,
   type DrawResult,
-  type RewardChoice,
 } from "@/hooks/useGame";
 import {
   CURIOSITY_CARDS,
@@ -61,11 +60,7 @@ export default function GachaPage() {
   const [animKey, setAnimKey] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [claimed, setClaimed] = useState(false);
-  const [lastClaim, setLastClaim] = useState<{
-    name: string;
-    choice: RewardChoice;
-    penalty?: string;
-  } | null>(null);
+  const [lastClaim, setLastClaim] = useState<{ name: string } | null>(null);
   const [drawing, setDrawing] = useState(false);
   const [multiResults, setMultiResults] = useState<DrawResult[] | null>(null);
   const collectionRef = useRef<HTMLElement>(null);
@@ -385,14 +380,14 @@ export default function GachaPage() {
                   카드 {GIFT_TARGET}장을 모두 모았어요! 🎉
                 </h2>
                 <p className="text-sm text-stone-500">
-                  기프트콘을 받을지, 친구에게 벌칙을 시킬지 골라주세요.
+                  아래에서 이름을 입력하고 기프트콘을 신청해주세요.
                 </p>
               </div>
             </div>
             <GiftconClaimForm
-              onSuccess={(name, choice, penalty) => {
-                game.completeClaim(name, choice, penalty);
-                setLastClaim({ name, choice, penalty });
+              onSuccess={(name) => {
+                game.completeClaim(name);
+                setLastClaim({ name });
                 setClaimed(true);
               }}
             />
@@ -417,11 +412,7 @@ export default function GachaPage() {
               </div>
             </div>
             {lastClaim && (
-              <ClaimTicket
-                name={lastClaim.name}
-                choice={lastClaim.choice}
-                penalty={lastClaim.penalty}
-              />
+              <ClaimTicket name={lastClaim.name} />
             )}
           </div>
         )}

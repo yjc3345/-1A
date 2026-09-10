@@ -6,6 +6,7 @@ import { useGame } from "@/hooks/useGame";
 import { STORE_ITEMS } from "@/mocks/store";
 
 const COUPON_PRICE = 100;
+const WEEKEND_COUPON_PRICE = 50;
 
 export default function StorePage() {
   const game = useGame();
@@ -22,6 +23,11 @@ export default function StorePage() {
   
   // 💡 쿠폰 최종 발급 완료 상태 (발급 완료 시 입력폼 숨김 처리)
   const [isIssued, setIsIssued] = useState(false);
+  const [weekendPurchased, setWeekendPurchased] = useState(false);
+  const [weekendName, setWeekendName] = useState("");
+  const [weekendDate, setWeekendDate] = useState("");
+  const [weekendFormError, setWeekendFormError] = useState<string | null>(null);
+  const [isWeekendIssued, setIsWeekendIssued] = useState(false);
 
   const showToast = (msg: string, tone: "ok" | "err") => {
     setToast({ msg, tone });
@@ -42,6 +48,20 @@ export default function StorePage() {
     }
   };
 
+  const handleWeekendBuy = () => {
+    if ((state?.coins || 0) < WEEKEND_COUPON_PRICE) {
+      showToast("코인이 부족해요! 문제를 풀어 코인을 모아주세요.", "err");
+      return;
+    }
+    const res = buyItem("weekendMakeupExemption");
+    if (res?.ok) {
+      showToast("주말 보강 면제 쿠폰 구매 완료! 정보를 입력해주세요.", "ok");
+      setWeekendPurchased(true);
+    } else {
+      showToast("구매에 실패했어요.", "err");
+    }
+  };
+
   // 💡 이름/날짜 입력 후 쿠폰 발급 확정
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -56,6 +76,21 @@ export default function StorePage() {
     }
     setIsIssued(true);
     showToast("🎉 하원 쿠폰이 발급되었습니다!", "ok");
+  };
+
+  const handleWeekendSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setWeekendFormError(null);
+    if (!weekendName.trim()) {
+      setWeekendFormError("이름을 입력해주세요.");
+      return;
+    }
+    if (!weekendDate) {
+      setWeekendFormError("면제받을 날짜를 선택해주세요.");
+      return;
+    }
+    setIsWeekendIssued(true);
+    showToast("🎉 주말 보강 면제 쿠폰이 발급되었습니다!", "ok");
   };
 
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -137,6 +172,81 @@ export default function StorePage() {
           </div>
         </section>
 
+        <section className="mt-6">
+          <div className="relative overflow-hidden rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-purple-50 p-8">
+            <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-violet-200/30"></div>
+            <div className="pointer-events-none absolute -bottom-16 -left-8 h-40 w-40 rounded-full bg-purple-200/20"></div>
+            <div className="relative flex flex-col items-center text-center">
+              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white text-5xl shadow-sm">🗓️</div>
+              <h2 className="mt-4 text-xl font-bold text-stone-900">주말 보강 면제 쿠폰(고림전용)</h2>
+              <p className="mt-2 max-w-md text-sm leading-relaxed text-stone-600">
+                이름과 면제 받을 날짜를 입력해 쿠폰을 발급해주세요.
+              </p>
+              <div className="mt-5 flex items-center gap-3">
+                <div className="inline-flex items-center gap-1.5 text-lg font-bold text-stone-800">
+                  <i className="ri-coin-line text-amber-500"></i>
+                  {WEEKEND_COUPON_PRICE} 코인
+                </div>
+                {weekendPurchased ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-4 py-2 text-sm font-bold text-white">
+                    <i className="ri-check-line"></i>
+                    {isWeekendIssued ? "쿠폰 사용/발급 완료" : "구매 완료"}
+                  </span>
+                ) : (
+                  <button
+                    onClick={handleWeekendBuy}
+                    disabled={(state?.coins || 0) < WEEKEND_COUPON_PRICE}
+                    className={`inline-flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-bold text-white transition whitespace-nowrap ${(state?.coins || 0) < WEEKEND_COUPON_PRICE ? "cursor-not-allowed bg-stone-300" : "cursor-pointer bg-violet-600 hover:bg-violet-700"}`}
+                  >
+                    <i className="ri-shopping-cart-2-line"></i>
+                    {(state?.coins || 0) < WEEKEND_COUPON_PRICE ? "코인 부족" : "구매하기"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {weekendPurchased && (
+          <section className="mt-8 space-y-6">
+            {!isWeekendIssued ? (
+              <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+                <h3 className="text-base font-bold text-stone-900">주말 보강 면제 쿠폰 정보 입력</h3>
+                <p className="mt-1 text-sm text-stone-500">
+                  이름과 면제 날짜를 선택하여 발급 완료 버튼을 눌러주세요.
+                </p>
+                <form onSubmit={handleWeekendSubmit} className="mt-5 space-y-5" noValidate>
+                  <div>
+                    <label htmlFor="weekend-coupon-name" className="mb-1.5 block text-sm font-semibold text-stone-800">학생 이름 <span className="text-rose-500">*</span></label>
+                    <input id="weekend-coupon-name" type="text" value={weekendName} onChange={(e) => setWeekendName(e.target.value)} required autoComplete="name" placeholder="예) 김하늘" className="w-full rounded-md border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200" />
+                  </div>
+                  <div>
+                    <label htmlFor="weekend-coupon-date" className="mb-1.5 block text-sm font-semibold text-stone-800">면제 날짜 <span className="text-rose-500">*</span></label>
+                    <select
+                      id="weekend-coupon-date"
+                      value={weekendDate}
+                      onChange={(e) => setWeekendDate(e.target.value)}
+                      required
+                      className="w-full rounded-md border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200"
+                    >
+                      <option value="">면제 날짜를 선택해주세요</option>
+                      <option value="2026-09-12">9월 12일 (토)</option>
+                      <option value="2026-09-19">9월 19일 (토)</option>
+                    </select>
+                  </div>
+                  {weekendFormError && <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{weekendFormError}</div>}
+                  <button type="submit" className="w-full cursor-pointer rounded-lg bg-violet-600 py-3 text-sm font-bold text-white shadow transition hover:bg-violet-700">🗓️ 이 정보로 쿠폰 최종 발급하기(수정 불가능)</button>
+                </form>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-violet-200 bg-violet-50 p-4 text-center text-sm font-semibold text-violet-800">✅ 쿠폰 발급이 완료되었습니다. 아래 완성된 쿠폰을 확인 및 공유해 주세요!</div>
+            )}
+            {weekendName.trim() && weekendDate && (
+              <LeaveCoupon name={weekendName.trim()} date={weekendDate} variant="weekend-exemption" />
+            )}
+          </section>
+        )}
+
         {/* Name + Date input → Coupon image */}
         {purchased && (
           <section className="mt-8 space-y-6">
@@ -144,7 +254,7 @@ export default function StorePage() {
             {!isIssued ? (
               <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
                 <h3 className="text-base font-bold text-stone-900">
-                  쿠폰 정보 입력
+                  8시 학원 하원 쿠폰 정보 입력
                 </h3>
                 <p className="mt-1 text-sm text-stone-500">
                   이름과 하원 날짜를 적고 발급 완료 버튼을 눌러주세요.

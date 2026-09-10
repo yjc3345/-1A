@@ -1,7 +1,7 @@
 // 상점에서 코인으로 구매할 수 있는 아이템
 // 현재 상품: 8시 학원 하원 쿠폰 (100코인)
 
-export type StoreItemId = "leaveCoupon";
+export type StoreItemId = "leaveCoupon" | "weekendMakeupExemption";
 
 export interface StoreItem {
   id: StoreItemId;
@@ -22,6 +22,15 @@ export const STORE_ITEMS: StoreItem[] = [
     icon: "ri-ticket-2-line",
     emoji: "🎫",
     color: "emerald",
+  },
+  {
+    id: "weekendMakeupExemption",
+    name: "주말 보강 면제 쿠폰(고림전용)",
+    desc: "이름과 면제 받을 날짜를 입력해 쿠폰을 발급해주세요.",
+    price: 50,
+    icon: "ri-calendar-close-line",
+    emoji: "🗓️",
+    color: "violet",
   },
 ];
 
