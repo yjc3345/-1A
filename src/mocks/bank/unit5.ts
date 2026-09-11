@@ -1,6 +1,7 @@
 // 중1 동아(윤) 5과 문제 은행: Who Threw a Cake at the Mona Lisa?
 // 본문(케이크 사건 목격 진술)을 다양한 형식(이해선택/빈칸선택/단답/문법/어휘)으로 반복 접하며 익힌다.
 import type { Question } from "../questions";
+import { DONGA5_PDF_QUESTIONS } from "./donga5Pdf";
 
 export const UNIT5_QUESTIONS: Question[] = [
   // ============ 본문 이해 (선택) ============
@@ -726,4 +727,5 @@ export const UNIT5_QUESTIONS: Question[] = [
     explanation:
       "전체가 과거 시제 진술이므로 fall의 과거형 fell이 알맞습니다.",
   },
+  ...DONGA5_PDF_QUESTIONS,
 ];

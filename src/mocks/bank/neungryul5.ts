@@ -2,6 +2,7 @@
 // 교과서 본문(자화상과 셀피) + 재귀대명사 + 목적/이유의 to부정사 + What do you think of it? / I agree. 를
 // 동아(윤)와 동일한 형식(이해선택/빈칸선택/단답/문법/대화/어휘)으로 반복 접하며 익힌다. (총 62문항)
 import type { Question } from "../questions";
+import { NEUNGRYUL5_PDF_QUESTIONS } from "./neungryul5Pdf";
 
 export const NEUNGRYUL5_QUESTIONS: Question[] = [
   // ============ 본문 이해 (선택) 1~7 ============
@@ -745,4 +746,5 @@ export const NEUNGRYUL5_QUESTIONS: Question[] = [
     explanation:
       "널브란트가 그린 대상이 '자신'이므로 재귀대명사 himself가 알맞습니다.",
   },
+  ...NEUNGRYUL5_PDF_QUESTIONS,
 ];
