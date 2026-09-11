@@ -185,13 +185,13 @@ export default function QuizPage() {
                     }`}
                   >
                     <span
-                      className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs font-bold ${
+                      className={`flex h-7 w-7 items-center justify-center rounded-full border text-sm font-bold ${
                         active
                           ? "border-emerald-500 bg-emerald-500 text-white"
                           : "border-stone-300 bg-white text-stone-500"
                       }`}
                     >
-                      {["①", "②", "③", "④"][i] || i + 1}
+                      {i + 1}
                     </span>
                     <span className="text-sm text-stone-800">{choice}</span>
                   </button>
